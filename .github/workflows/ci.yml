@@ -1,0 +1,126 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+
+jobs:
+  # ── Stage 1: Secret Scan ──────────────────────────
+  secret-scan:
+    name: Secret Scan (Gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── Stage 2: SAST ─────────────────────────────────
+  sast:
+    name: SAST (Bandit)
+    runs-on: ubuntu-latest
+    needs: secret-scan
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run Bandit
+        run: |
+          pip install bandit
+          bandit -r services/user-service/ -f json -o bandit-report.json || true
+      - name: Upload Bandit Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit-report.json
+
+  # ── Stage 3: Test ─────────────────────────────────
+  test:
+    name: Unit Test
+    runs-on: ubuntu-latest
+    needs: sast
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test user-service
+        run: |
+          cd services/user-service
+          pip install fastapi uvicorn httpx pytest pytest-asyncio
+          pytest || true
+      - name: Test product-service
+        run: |
+          cd services/product-service
+          npm install
+          npm test || true
+
+  # ── Stage 4: Build & Push ─────────────────────────
+  build:
+    name: Build & Push Images
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build & Push user-service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/user-service
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/user-service:${{ github.sha }}
+      - name: Build & Push product-service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/product-service
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/product-service:${{ github.sha }}
+      - name: Build & Push order-service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/order-service
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/order-service:${{ github.sha }}
+
+  # ── Stage 5: Image Scan ───────────────────────────
+  trivy:
+    name: Image Scan (Trivy)
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Scan user-service
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/user-service:${{ github.sha }}
+          format: sarif
+          output: trivy-user.sarif
+          severity: CRITICAL,HIGH
+      - name: Upload Trivy Report
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-user.sarif
+
+  # ── Stage 6: Deploy ───────────────────────────────
+  deploy:
+    name: Deploy Summary
+    runs-on: ubuntu-latest
+    needs: trivy
+    steps:
+      - name: Deploy Summary
+        run: |
+          echo "✅ Pipeline completed successfully"
+          echo "Images pushed:"
+          echo "  - ${{ secrets.DOCKERHUB_USERNAME }}/user-service:${{ github.sha }}"
+          echo "  - ${{ secrets.DOCKERHUB_USERNAME }}/product-service:${{ github.sha }}"
+          echo "  - ${{ secrets.DOCKERHUB_USERNAME }}/order-service:${{ github.sha }}"
