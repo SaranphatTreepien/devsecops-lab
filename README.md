@@ -8,6 +8,7 @@
 ## 📋 Project Overview
 
 โปรเจคนี้สร้าง **3 microservices** และนำขึ้น **Kubernetes** พร้อม observability stack ครบชุด โดยใช้ practices ที่ใช้จริงในบริษัท
+![Uploading unnamed (1).png…]()
 
 ```
 Developer pushes code
