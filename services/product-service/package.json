@@ -2,6 +2,9 @@
   "name": "product-service",
   "version": "1.0.0",
   "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
   "dependencies": {
     "express": "^4.19.2",
     "prom-client": "^15.1.3"
