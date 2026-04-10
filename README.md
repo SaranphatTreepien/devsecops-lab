@@ -7,8 +7,8 @@
 
 ## 📋 Project Overview
 
-โปรเจคนี้สร้าง **3 microservices** และนำขึ้น **Kubernetes** พร้อม observability stack ครบชุด โดยใช้ practices ที่ใช้จริงในบริษัท
-![Uploading unnamed (1).png…]()
+โปรเจคนี้เป็น DevSecOps lab สำหรับการฝึกปฏิบัติ โดยสร้าง 3 microservices และ deploy บน Kubernetes cluster เพื่อเรียนรู้การทำงานของระบบแบบ distributed พร้อมติดตั้ง observability stack แบบพื้นฐาน เพื่อฝึกการ monitor และ debug ระบบ โดยเน้นการทำความเข้าใจ workflow และ practices ที่ใช้ในงานจริง<img width="2752" height="1536" alt="Overview" src="https://github.com/user-attachments/assets/bb4445e4-818e-44ea-8520-037e4c1accf4" />
+
 
 ```
 Developer pushes code
