@@ -76,16 +76,50 @@ jobs:
     needs: [sast, codeql]
     steps:
       - uses: actions/checkout@v4
+
+      # ── User Service (Python) ──
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install user-service dependencies
+        run: |
+          cd services/user-service
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio httpx
+
       - name: Test user-service
         run: |
           cd services/user-service
-          pip install fastapi uvicorn httpx pytest pytest-asyncio
-          pytest || true
+          pytest -v
+
+      # ── Product Service (Node.js) ──
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install product-service dependencies
+        run: |
+          cd services/product-service
+          npm ci
+
       - name: Test product-service
         run: |
           cd services/product-service
-          npm install
-          npm test || true
+          npm test
+
+      # ── Order Service (Go) ──
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Test order-service
+        run: |
+          cd services/order-service
+          go test ./... -v
 
   # ── Stage 4: Build & Push ─────────────────────────
   build:
@@ -146,7 +180,13 @@ jobs:
       - name: Deploy Summary
         run: |
           echo "✅ Pipeline completed successfully"
-          echo "Images pushed:"
+          echo ""
+          echo "📦 Images pushed to DockerHub:"
           echo "  - ${{ secrets.DOCKERHUB_USERNAME }}/user-service:${{ github.sha }}"
           echo "  - ${{ secrets.DOCKERHUB_USERNAME }}/product-service:${{ github.sha }}"
           echo "  - ${{ secrets.DOCKERHUB_USERNAME }}/order-service:${{ github.sha }}"
+          echo ""
+          echo "🚀 In production, would deploy with:"
+          echo "  kubectl set image deployment/order-service order-service=...:${{ github.sha }} -n forge-ops"
+          echo "  kubectl set image deployment/product-service product-service=...:${{ github.sha }} -n forge-ops"
+          echo "  kubectl set image deployment/user-service user-service=...:${{ github.sha }} -n forge-ops"
