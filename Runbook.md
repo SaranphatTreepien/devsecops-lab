@@ -254,3 +254,9 @@ kube_pod_container_status_restarts_total{namespace="forge-ops"}
 {namespace="forge-ops"} |= "500"
 {namespace="forge-ops"} |= "404"
 ```
+### ReScale
+```Recovery — scale
+#  
+kubectl scale deployment order-service --replicas=2 -n forge-ops
+kubectl get pods -n forge-ops -w
+```
