@@ -199,6 +199,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Start mock server
+        run: |
+          mkdir -p mock
+          echo '{"users":[]}' > mock/users
+          echo '{"products":[]}' > mock/products
+          echo '{"orders":[]}' > mock/orders
+          cd mock && python3 -m http.server 8888 &
+          sleep 2
+
       - name: Install k6
         run: |
           curl -L https://github.com/grafana/k6/releases/download/v0.49.0/k6-v0.49.0-linux-amd64.tar.gz -o k6.tar.gz
@@ -210,7 +219,7 @@ jobs:
         run: k6 run load-tests/smoke-test.js
         env:
           K6_NO_USAGE_REPORT: true
-          BASE_URL: https://httpbin.org
+          CI_MODE: "true"
 
       - name: Upload k6 Report
         if: always()
