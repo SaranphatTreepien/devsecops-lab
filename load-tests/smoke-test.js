@@ -8,19 +8,20 @@ export const options = {
     http_req_failed: ['rate<0.01'],
     http_req_duration: ['p(95)<500'],
   },
-}
+};
 
-const BASE_URL = 'http://forge-ops.local:8888';
+// Local: ยิงไป forge-ops.local จริง
+// CI:    ส่ง BASE_URL=https://httpbin.org ผ่าน env แทน
+const BASE_URL = __ENV.BASE_URL || 'http://forge-ops.local:8888';
+const IS_CI = __ENV.BASE_URL !== undefined;
+
+const endpoints = IS_CI
+  ? ['/get', '/get', '/get']           // httpbin ใช้ /get
+  : ['/users', '/products', '/orders']; // forge-ops จริง
 
 export default function () {
-  const endpoints = [
-    `${BASE_URL}/users`,
-    `${BASE_URL}/products`,
-    `${BASE_URL}/orders`,
-  ];
-
-  for (const url of endpoints) {
-    const res = http.get(url);
+  for (const path of endpoints) {
+    const res = http.get(`${BASE_URL}${path}`);
     check(res, {
       'status is 200': (r) => r.status === 200,
       'response time < 500ms': (r) => r.timings.duration < 500,
