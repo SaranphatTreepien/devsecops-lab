@@ -1,0 +1,63 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: slo-rules
+  namespace: observability
+  labels:
+    release: prometheus
+spec:
+  groups:
+    - name: slo.rules
+      interval: 30s
+      rules:
+        # ── User Service SLO 99.9% uptime ──
+        - record: slo:user_service:request_rate
+          expr: |
+            sum(rate(user_service_requests_total{job="forge-ops-user-service"}[5m]))
+
+        - alert: UserServiceDown
+          expr: |
+            sum(rate(user_service_requests_total{job="forge-ops-user-service"}[5m])) == 0
+          for: 2m
+          labels:
+            severity: critical
+            service: user-service
+          annotations:
+            summary: "User Service is down"
+            description: "No requests received for 2 minutes"
+            runbook_url: "https://github.com/SaranphatTreepien/devsecops-lab/blob/main/runbooks/incident-response.md#user-service-down"
+
+
+        # ── Product Service SLO 99.9% uptime ──
+        - record: slo:product_service:request_rate
+          expr: |
+            sum(rate(product_service_requests_total{job="forge-ops-product-service"}[5m]))
+
+        - alert: ProductServiceDown
+          expr: |
+            sum(rate(product_service_requests_total{job="forge-ops-product-service"}[5m])) == 0
+          for: 2m
+          labels:
+            severity: critical
+            service: product-service
+          annotations:
+            summary: "Product Service is down"
+            description: "No requests received for 2 minutes"
+            runbook_url: "https://github.com/SaranphatTreepien/devsecops-lab/blob/main/runbooks/incident-response.md#product-service-down"
+
+        # ── Order Service SLO 99.5% uptime ──
+        - record: slo:order_service:request_rate
+          expr: |
+            sum(rate(order_requests_total{job="forge-ops-order-service"}[5m]))
+
+        - alert: OrderServiceDown
+          expr: |
+            sum(rate(order_requests_total{job="forge-ops-order-service"}[5m])) == 0
+          for: 2m
+          labels:
+            severity: critical
+            service: order-service
+          annotations:
+            summary: "Order Service is down"
+            description: "No requests received for 2 minutes"
+            runbook_url: "https://github.com/SaranphatTreepien/devsecops-lab/blob/main/runbooks/incident-response.md#order-service-down"
